@@ -12,3 +12,13 @@
 - **Modelo Pull:** Cero fricción, avance a tu propio ritmo.
 - **Independencia Total:** Cero llamadas a APIs externas de Inteligencia Artificial en tiempo de ejecución.
 - **Extensibilidad:** Arquitectura desacoplada preparada para soportar futuros juegos lúdicos y competencias grupales.
+
+---
+
+## 📚 Documentación e Historial
+El proyecto se desarrolla bajo estrictos estándares de gobernanza y arquitectura modular:
+- **Gobernanza de Agentes:** Consulta [AGENTS.md](./AGENTS.md)
+- **Especificación de Requerimientos:** Consulta [REQUIREMENTS.md](./REQUIREMENTS.md)
+- **Reporte Técnico de la Etapa 1:** Consulta [Etapa 1](./docs/etapa-1-reporte.md)
+- **Bitácora Histórica del Proyecto:** Consulta [Historial Técnico](./docs/HISTORIAL_TECNICO.md)
+
