@@ -7,14 +7,16 @@ from sqlalchemy.engine import Engine
 
 import models
 from alembic import context
-from database import DATABASE_URL
+from app.db.database import DATABASE_URL, Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-Base = models.Base
+if models.Base is not Base:
+    raise RuntimeError("Alembic y los modelos deben compartir la misma Base declarativa.")
+
 target_metadata = Base.metadata
 
 

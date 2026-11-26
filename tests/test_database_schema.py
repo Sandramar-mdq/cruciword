@@ -7,6 +7,7 @@ from alembic.config import Config
 from sqlalchemy import JSON, UniqueConstraint, create_engine
 from sqlalchemy import inspect as sa_inspect
 
+import app.db.database as db_module
 import database
 from alembic import command
 from models import (
@@ -45,7 +46,14 @@ def test_expected_columns() -> None:
             "account_type",
             "created_at",
         },
-        "classrooms": {"id", "teacher_id", "name", "invite_code", "created_at"},
+        "classrooms": {
+            "id",
+            "teacher_id",
+            "name",
+            "description",
+            "invite_code",
+            "created_at",
+        },
         "student_classrooms": {"student_id", "classroom_id", "joined_at"},
         "words": {
             "id",
@@ -66,6 +74,7 @@ def test_expected_columns() -> None:
             "is_completed",
             "score",
             "hints_used",
+            "power_badge_earned",
             "updated_at",
         },
     }
@@ -122,7 +131,7 @@ def test_initial_migration_applies_and_reverts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     db_url = "sqlite:///" + (tmp_path / "cruciword.db").as_posix()
-    monkeypatch.setattr(database, "DATABASE_URL", db_url)
+    monkeypatch.setattr(db_module, "DATABASE_URL", db_url)
     config = Config(str(ROOT / "alembic.ini"))
 
     command.upgrade(config, "head")
