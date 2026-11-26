@@ -19,6 +19,7 @@ from models import (
     UserProgress,
     UserRole,
     Word,
+    WordList,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +30,8 @@ EXPECTED_TABLES = {
     "words",
     "puzzles",
     "user_progress",
+    "word_lists",
+    "word_list_words",
 }
 
 
@@ -75,8 +78,19 @@ def test_expected_columns() -> None:
             "score",
             "hints_used",
             "power_badge_earned",
+            "retention_score",
+            "retention_completed_at",
             "updated_at",
         },
+        "word_lists": {
+            "id",
+            "teacher_id",
+            "classroom_id",
+            "name",
+            "description",
+            "created_at",
+        },
+        "word_list_words": {"word_list_id", "word_id"},
     }
     for table_name, columns in expected.items():
         assert set(database.Base.metadata.tables[table_name].columns.keys()) == columns
@@ -97,15 +111,18 @@ def test_foreign_keys_use_cascade() -> None:
 
 
 def test_relationships_are_configured() -> None:
-    assert {"classrooms_taught", "classrooms_enrolled", "progress"} <= set(
+    assert {"classrooms_taught", "classrooms_enrolled", "word_lists", "progress"} <= set(
         sa_inspect(User).relationships.keys()
     )
-    assert {"teacher", "students", "puzzles"} <= set(
+    assert {"teacher", "students", "puzzles", "word_lists"} <= set(
         sa_inspect(Classroom).relationships.keys()
     )
     assert {"classroom", "progress"} <= set(sa_inspect(Puzzle).relationships.keys())
     assert {"user", "puzzle"} <= set(sa_inspect(UserProgress).relationships.keys())
-    assert set(sa_inspect(Word).relationships.keys()) == set()
+    assert set(sa_inspect(Word).relationships.keys()) == {"word_lists"}
+    assert {"teacher", "classroom", "words"} <= set(
+        sa_inspect(WordList).relationships.keys()
+    )
 
 
 def test_json_column_and_progress_uniqueness() -> None:
@@ -114,6 +131,19 @@ def test_json_column_and_progress_uniqueness() -> None:
         isinstance(constraint, UniqueConstraint)
         and set(constraint.columns.keys()) == {"user_id", "puzzle_id"}
         for constraint in UserProgress.__table__.constraints
+    )
+
+
+def test_seed_idempotency_constraints() -> None:
+    assert any(
+        isinstance(constraint, UniqueConstraint)
+        and set(constraint.columns.keys()) == {"word", "level"}
+        for constraint in Word.__table__.constraints
+    )
+    assert any(
+        isinstance(constraint, UniqueConstraint)
+        and set(constraint.columns.keys()) == {"title", "level"}
+        for constraint in Puzzle.__table__.constraints
     )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,6 +15,8 @@ from app.schemas.puzzle import (
     ProgressSubmit,
     PuzzleDetailResponse,
     PuzzleSummary,
+    RetentionResultResponse,
+    RetentionSubmit,
 )
 from app.services.puzzle_service import evaluate_progress
 from models import Level, Puzzle, User, UserProgress
@@ -103,6 +106,20 @@ def _to_detail(puzzle: Puzzle) -> PuzzleDetailResponse:
     )
 
 
+def _get_or_create_progress(db: Session, user_id: int, puzzle_id: int) -> UserProgress:
+    """Obtiene o crea el progreso único de un usuario para un crucigrama."""
+    progress = db.scalar(
+        select(UserProgress).where(
+            UserProgress.user_id == user_id,
+            UserProgress.puzzle_id == puzzle_id,
+        )
+    )
+    if progress is None:
+        progress = UserProgress(user_id=user_id, puzzle_id=puzzle_id)
+        db.add(progress)
+    return progress
+
+
 @router.get("", response_model=list[PuzzleSummary])
 def list_puzzles(
     db: Annotated[Session, Depends(get_db)],
@@ -154,15 +171,7 @@ def submit_progress(
         payload.power_mode_used,
     )
 
-    progress = db.scalar(
-        select(UserProgress).where(
-            UserProgress.user_id == current_user.id,
-            UserProgress.puzzle_id == puzzle_id,
-        )
-    )
-    if progress is None:
-        progress = UserProgress(user_id=current_user.id, puzzle_id=puzzle_id)
-        db.add(progress)
+    progress = _get_or_create_progress(db, current_user.id, puzzle_id)
 
     progress.is_completed = result.completed
     progress.score = len(result.correct_words)
@@ -171,3 +180,29 @@ def submit_progress(
     db.commit()
 
     return result
+
+
+@router.post("/{puzzle_id}/retention", response_model=RetentionResultResponse)
+def submit_retention(
+    puzzle_id: int,
+    payload: RetentionSubmit,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> RetentionResultResponse:
+    """Registra un repaso sin pistas sin alterar el progreso normal."""
+    puzzle = _get_puzzle_or_404(db, puzzle_id)
+    result = evaluate_progress(puzzle.grid_data, payload.answers)
+    score = len(result.correct_words)
+
+    progress = _get_or_create_progress(db, current_user.id, puzzle_id)
+    progress.retention_score = score
+    progress.retention_completed_at = datetime.now(timezone.utc)
+    db.commit()
+
+    return RetentionResultResponse(
+        completed=result.completed,
+        correct_words=result.correct_words,
+        incorrect_words=result.incorrect_words,
+        score=score,
+        message=result.message,
+    )

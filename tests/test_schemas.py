@@ -12,8 +12,11 @@ from app.schemas.puzzle import (
     ProgressResultResponse,
     ProgressSubmit,
     PuzzleDetailResponse,
+    RetentionResultResponse,
+    RetentionSubmit,
 )
 from app.schemas.user import UserCreate, UserResponse
+from app.schemas.word_list import WordListCreate, WordListResponse, WordSummary
 
 
 class UserRecord:
@@ -130,3 +133,48 @@ def test_classroom_response_from_attributes() -> None:
         "join_code": "M7K2",
         "teacher_id": 3,
     }
+
+
+def test_word_list_contracts() -> None:
+    created = WordListCreate(name="Frutas", word_ids=[3, 1, 3])
+    word = WordSummary(
+        id=1,
+        word="APPLE",
+        translation="manzana",
+        level="A1",
+        theme="Daily life",
+        definition_en="A round fruit that grows on a tree.",
+        synonym_hint="red fruit",
+        is_power=False,
+    )
+    response = WordListResponse(
+        id=9,
+        name="Frutas",
+        description=None,
+        classroom_id=4,
+        teacher_id=2,
+        words=[word],
+    )
+
+    assert created.word_ids == [3, 1]
+    assert response.words[0].word == "APPLE"
+
+    with pytest.raises(ValidationError):
+        WordListCreate(name="")
+
+
+def test_retention_contracts() -> None:
+    submit = RetentionSubmit(answers={"1_across": "APPLE"})
+    result = RetentionResultResponse(
+        completed=True,
+        correct_words=["1_across"],
+        incorrect_words=[],
+        score=1,
+        message="¡Muy bien! Completaste el crucigrama. Cada palabra suma.",
+    )
+
+    assert submit.answers["1_across"] == "APPLE"
+    assert result.score == 1
+
+    with pytest.raises(ValidationError):
+        RetentionSubmit(answers={"1_across": 5})

@@ -53,3 +53,19 @@ class ProgressResultResponse(BaseModel):
     incorrect_words: list[str]
     power_badge_earned: bool
     message: str
+
+
+class RetentionSubmit(BaseModel):
+    """Respuestas del test de retención sin pistas ni Modo Power."""
+
+    answers: dict[str, str]
+
+
+class RetentionResultResponse(BaseModel):
+    """Resultado del repaso semanal sin bloqueos ni mensajes punitivos."""
+
+    completed: bool
+    correct_words: list[str]
+    incorrect_words: list[str]
+    score: int
+    message: str

@@ -41,6 +41,27 @@ Este documento recopila la evolución histórica, las decisiones de arquitectura
 
 ---
 
+## 🧱 Etapa 3: Backend complementario, datos semilla y cierre de HU-06/HU-09 (Noviembre 2026)
+- **Estado:** Completada y validada.
+- **Entregables completados:**
+  - Seed idempotente ejecutable con `python -m app.db.seed`: 25 palabras (5 por nivel A1-C1) y 5 crucigramas base con pistas estáticas y soluciones server-side.
+  - Listas personalizadas (`HU-09`) mediante `word_lists` y `word_list_words`, esquemas en `app/schemas/word_list.py` y endpoints en `app/api/routes/word_lists.py`.
+  - Test de retención (`HU-06`) en `POST /api/puzzles/{puzzle_id}/retention`, con esquemas en `app/schemas/puzzle.py` y reutilización de `evaluate_progress`.
+  - Migración Alembic `c4c813450fd6` con nuevas tablas, columnas de retención y constraints únicos de seed.
+- **Decisiones técnicas relevantes:**
+  - `WordList` mantiene `Word` desacoplado: las listas solo referencian `word_ids` existentes y no crean palabras nuevas.
+  - La lectura está restringida al docente dueño o a estudiantes vinculados al aula; sin acceso se responde `404` para no filtrar datos.
+  - La retención es libre y a demanda: no hay time-locks ni validación de semana; registra `retention_score` y `retention_completed_at` sin sobrescribir `score`, `hints_used` ni `power_badge_earned`.
+- **Trazabilidad de requerimientos:** cerrados `HU-06` (test de retención) y `HU-09` (listas personalizadas). `HU-04` continúa pendiente en la Etapa 3 de frontend porque corresponde al teclado virtual A-Z.
+- **Verificación de cierre:**
+  - `python -m pytest -q`: 75 tests pasados.
+  - `python -m ruff check .`: sin advertencias ni errores.
+  - `python -m compileall -q .`: compilación correcta; smoke de imports con 17 rutas FastAPI registradas.
+  - Alembic: `upgrade head`, `check`, `downgrade base` y SQL offline PostgreSQL sin errores; head vigente `c4c813450fd6`.
+  - Seed ejecutado dos veces sobre SQLite temporal: 25 palabras y 5 crucigramas insertados, luego 25 y 5 omitidos.
+
+---
+
 ## ⚙️ Etapa 2: Backend, API REST y Gestión de Sesiones (Noviembre 2026)
 - **Estado:** Completada y validada.
 - **Hitos alcanzados:**
@@ -51,6 +72,17 @@ Este documento recopila la evolución histórica, las decisiones de arquitectura
   - Códigos de unión a aulas (`join_code`) de 6 caracteres sin ambigüedad visual (`0, O, 1, I`).
   - Validación completa: **58/58 tests unitarios** en `pytest`, `ruff` sin advertencias y 13 rutas FastAPI registradas.
 - **Reporte detallado:** [Ver reporte completo de la Etapa 2](./etapa-2-reporte.md)
+
+---
+
+## ⚙️ Cierre de Pendientes de Backend: HU-06 (Retención) y HU-09 (Listas Personalizadas) (Noviembre 2026)
+- **Estado:** Completado y validado.
+- **Hitos alcanzados:**
+  - Creación de modelos `word_lists` y relación M:N `word_list_words` desacoplados del banco léxico principal.
+  - Incorporación de campos de retención (`retention_score`, `retention_completed_at`) en `UserProgress` sin bloqueos de tiempo (*time-locks*).
+  - Migración de Alembic aplicada exitosamente (`c4c81345fd6`).
+  - Script de datos semilla (`python -m app.db.seed`) idempotente con 25 palabras y 5 crucigramas (niveles A1 a C1).
+  - Cobertura de pruebas ampliada a **75 tests unitarios** pasando al 100% con `pytest`, análisis estático limpio con `ruff` y 17 rutas FastAPI operativas.
 
 ---
 
