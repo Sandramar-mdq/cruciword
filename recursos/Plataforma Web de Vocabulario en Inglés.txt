@@ -1,0 +1,115 @@
+Documento de Especificación Funcional y Arquitectónica (SRS v1.0)
+Proyecto: Plataforma Web de Vocabulario en Inglés (Estética Cómic Accesible)
+
+Estado: Congelado — Listo para pasar a Etapa 1 (Diseño de Base de Datos y Backend)
+
+1. Propósito y Reglas de Negocio (Core Philosophy)
+Naturaleza del producto: Herramienta web minimalista (PWA) de refuerzo de vocabulario en inglés mediante crucigramas con propósito.
+
+Política Anti-Fricción: Cero notificaciones persecutorias, cero cronómetros punitivos y cero bloqueos temporales (time-locks). El ritmo de estudio es 100% libre y a demanda (modelo Pull).
+
+Acceso Universal: Diseño de interfaz orientado por igual a niños iniciados en lectoescritura y adultos mayores, eliminando curvas de aprendizaje y menús complejos.
+
+Independencia Técnica: Cero dependencia de APIs externas de Inteligencia Artificial en tiempo de ejecución. Toda la lógica de pistas, sinónimos y definiciones opera desde la base de datos propia para garantizar velocidad instantánea, costo cero de tokens y disponibilidad offline parcial.
+
+2. Arquitectura Tecnológica y Multi-dispositivo
+Frontend: HTML5 + Tailwind CSS + JavaScript vainilla (orientación vertical prioritaria mobile-first, responsiva para tablet y PC).
+
+Backend: Python + FastAPI.
+
+Base de Datos: PostgreSQL en la nube (Neon) para persistencia y sincronización de cuentas entre celular, tablet y PC.
+
+Audio: Web Speech API nativa del navegador (speechSynthesis), activada exclusivamente bajo clic consciente del usuario (nunca reproducción automática).
+
+3. Estética Visual y Ergonomía Cognitiva
+Identidad Visual: Estética tipo revista de pasatiempos / cómic de alto contraste. Trazos puros en negro (#000000) de grosor marcado (2px-3px) y tipografía sans-serif de gran tamaño en imprenta mayúscula.
+
+Regla Cromática 60-30-10 (Accesibilidad TDAH / TEA / Adultos Mayores):
+
+60% Fondo: Tonos pastel desaturados según tema ambiental seleccionado (Día Soleado, Día Ventoso, Día Nublado, Día Lluvioso, Tardecita, Noche), más opción de personalización libre.
+
+30% Grilla: Celdas de escritura en blanco puro (#FFFFFF) con letra negra (#000000), y celdas bloqueadas sin letras.
+
+10% Acentos: Colores vibrantes aplicados únicamente a la burbuja de definición activa (un color fijo para palabras Horizontales y otro distinto para Verticales) y al resaltado de fila/columna seleccionada.
+
+Nomenclatura Legal: Uso exclusivo de nombres genéricos ambientales y descriptivos para los temas y colores, evitando cualquier referencia explícita a marcas registradas.
+
+Teclado Virtual Propio: Teclado integrado en pantalla vertical con teclas grandes (mínimo 48x48px), adaptado a los colores del tema activo, conteniendo exclusivamente las 26 letras del alfabeto inglés (A-Z) y tecla de borrado.
+
+4. Mecánica Pedagógica y Flujo de Usuario (Horizonte 1 — MVP)
+Gestión de Usuarios y Roles (RBAC):
+
+Registro/Login sencillo para sincronizar progreso entre dispositivos.
+
+Uso Mixto: Un estudiante (student) puede entrenar libremente con los paquetes estándar de la plataforma y, paralelamente, vincularse mediante un Código de Clase a un profesor (teacher) para resolver las listas personalizadas que este último publique.
+
+Estructura de Contenidos:
+
+Niveles abiertos (A1 a C1): Definidos por frecuencia léxica y complejidad de la definición en inglés. Sin bloqueos; si un usuario A1 abre un nivel B2, recibe una advertencia amigable no bloqueante.
+
+Bloques Semanales (20 palabras): Distribuidas con repetición espaciada natural a lo largo de 5 o 6 crucigramas precalculados (disponibles todos desde el inicio).
+
+Modo Power / Picante (Opcional): Interruptor que añade de 5 a 10 expresiones coloquiales o modismos adicionales al bloque.
+
+Sistema de Pistas y Traducción:
+
+Definición obligatoria en inglés.
+
+Traducción bajo demanda con fricción: Botón discreto que requiere acción deliberada para mostrar el español.
+
+Límite de 3 pistas estáticas por partida: Pista 1 (sinónimo en inglés), Pista 2 (contexto/categoría) y Pista 3 (revelación de una letra específica al tocar "¿Qué va acá?" y seleccionar un casillero).
+
+Evaluación: Test rápido de recuperación activa al finalizar el bloque de crucigramas para medir retención.
+
+5. Backlog Evolutivo (Horizonte 2 — Post-MVP)
+Nuevas variantes de entrenamiento sobre la misma base léxica: tabla de emparejamiento de sinónimos/antónimos y juego Memotex con iconos simples.
+
+Desafíos vinculares por parejas o equipos: Modalidad por turnos o rondas escalables (estilo Preguntados) dentro de las aulas de profesor como herramienta de evaluación grupal lúdica.
+
+
+_______________________________________________________________________________
+
+Listado de Etapas Actualizado (Versión Final de Referencia)
+Etapa 1: Base de Datos y Esquema Relacional Extensible
+
+Modelado en PostgreSQL (Neon) con SQLAlchemy y Alembic.
+
+Estructura desacoplada: banco léxico independiente de las grillas para soportar juegos futuros.
+
+Tablas preparadas para roles (estudiante, profesor, administrador), aulas grupales y campos de control para futura monetización.
+
+Etapa 2: Backend y Endpoints Base (FastAPI)
+
+Configuración del servidor, autenticación y sincronización de estado entre dispositivos.
+
+Endpoints de consulta para bloques semanales, niveles y registro de avance.
+
+Etapa 3: Interfaz Responsiva Multi-dispositivo y PWA (Frontend)
+
+Maquetación fluida en HTML5 y Tailwind CSS adaptable a celular, tablet y escritorio.
+
+Aplicación de la regla cromática 60-30-10, temas ambientales y estética cómic de alto contraste.
+
+Etapa 4: Motor de Crucigrama y Teclado Virtual
+
+Renderizado dinámico de celdas y lógica de selección de palabras.
+
+Implementación del teclado virtual propio (letras A a Z) adaptado al tamaño de cada pantalla.
+
+Etapa 5: Sistema de Pistas Estáticas, Audio y Evaluación
+
+Lógica de las 3 pistas fijas y traducción bajo demanda con fricción.
+
+Integración de audio opcional mediante Web Speech API y módulo de test semanal.
+
+Etapa 6: Módulo de Profesores y Aulas Grupales
+
+Panel de gestión docente para crear listas personalizadas y generar códigos de clase.
+
+Base estructural de grupos lista para futuras competencias por parejas o equipos.
+
+Etapa 7: Sostenibilidad y Monetización B2B/B2C
+
+Incorporación de enlace voluntario estilo Cafecito.
+
+Activación de auspicios de bloques, venta de packs especializados y planes accesibles para institutos educativos.
