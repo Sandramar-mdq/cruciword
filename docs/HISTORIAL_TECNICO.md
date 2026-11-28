@@ -182,3 +182,45 @@ Este documento recopila la evolución histórica, las decisiones de arquitectura
 
 ---
 
+## Anexo Técnico — Etapa 4: Motor de Crucigrama, Teclado Virtual y Validación Pull (CruciWord)
+
+**Fecha:** 28 de noviembre de 2026  
+**Estado:** Completado, verificado y confirmado en control de versiones (`main`)  
+**Alcance:** Implementación integral del núcleo interactivo en frontend, interfaz táctil inclusiva, validación bajo demanda y matriz de calidad.
+
+---
+
+### 1. Arquitectura Modular y Motor de Grilla (`static/js/grid-engine.js` & `navigation.js`)
+- **Normalización y Renderizado:** Estructuración del contrato de datos proveniente de FastAPI (`grid_size`, `blocked_cells`, `clues`, `placements`) hacia una grilla responsiva basada en CSS Grid.
+- **Navegación Inteligente:**
+  - Soporte para selección directa por clic o toque y alternancia automática de dirección (horizontal/vertical) en celdas de intersección.
+  - Desplazamiento continuo con auto-avance al escribir, retroceso inteligente con `Backspace`/`Delete` y recorrido por teclado direccional (`ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Home`, `End`).
+  - Salto automático de celdas bloqueadas y delimitación estricta dentro de los bordes del tablero.
+
+### 2. Interfaz Táctil Inclusiva y Soporte Físico (`static/js/keyboard.js` & `virtual_keyboard.html`)
+- **Teclado Virtual QWERTY (`templates/partials/virtual_keyboard.html`):**
+  - Disposición de 26 letras en filas QWERTY más botones de acción dedicada (borrado, cambio de dirección `⇄` y comprobación `✓`).
+  - Áreas interactivas con dimensiones mínimas accesibles de `48px × 48px`, `touch-action: manipulation` y atributo `inputmode="none"` en las celdas para evitar el despliegue intrusivo del teclado nativo en dispositivos móviles.
+  - Reglas de respaldo (*fallback*) definidas directamente en `static/css/themes.css` para eliminar dependencias de compilación en tiempo de ejecución.
+- **Interoperabilidad con Teclado Físico:**
+  - Captura acotada de `Tab` y `Space` exclusivamente cuando el foco reside dentro de una celda jugable del tablero (`[data-board-grid]`), preservando la navegación nativa accesible en el resto de la página.
+  - Listener único en `keydown` que evita duplicación de eventos al combinar entradas táctiles y físicas.
+
+### 3. Validación Instantánea "Pull" y Paleta Accesible (`static/js/board.js` & `themes.css`)
+- **Flujo Sin Fricción:**
+  - Eliminación completa de temporizadores automáticos (`debounce` y `setTimeout`). La petición `POST /api/puzzles/{id}/check` se dispara únicamente a demanda del usuario al accionar el botón `✓` (`CruciBoard.checkNow()`).
+  - Limpieza sincrónica del estado visual (`clearFeedback()`) al modificar una letra, manteniendo las celdas acertadas editables para permitir correcciones libres.
+- **Psicología del Color sin Penalización (Estándar WCAG AAA):**
+  - **Acierto (`cw-cell--correct`):** Verde salvia suave (`#D1FAE5`) con texto de alto contraste (`#064E3B`, ratio `8.57:1`).
+  - **Para revisar (`cw-cell--review`):** Ámbar cálido (`#FEF3C7`) con texto oscuro (`#78350F`, ratio `8.15:1`), aplicado únicamente sobre palabras con letras ingresadas.
+  - Ausencia total de tonos rojos punitivos, cronómetros o límites de intentos.
+
+### 4. Calidad, Pruebas Automatizadas y PWA
+- **Suite de Verificación (149 tests aprobados):**
+  - Cobertura unitaria y de integración distribuida en `test_grid_engine.py`, `test_grid_navigation.py`, `test_virtual_keyboard.py`, `test_instant_check.py` y la matriz de validación `test_stage4_matrix.py` (intersecciones, bordes, eventos sin duplicación, contraste AAA y *smoke test* de arranque).
+  - Validación estática aprobada mediante `pytest`, `ruff check .`, `compileall` y `node --check` sobre todos los módulos JavaScript.
+- **Service Worker (`static/sw.js`):** Actualización de la caché estática a `cruciword-static-v6` incluyendo los cuatro módulos principales del motor.
+- **Control de Versiones:** Consolidación de todos los artefactos en un commit limpio bajo el mensaje `feat(cruciword): completar Etapa 4 - motor, navegacion, teclado virtual y validacion Pull`[cite: 3, 4, 8, 9, 10, 13].
+
+---
+
