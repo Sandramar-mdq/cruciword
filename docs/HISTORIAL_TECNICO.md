@@ -58,7 +58,76 @@ Este documento recopila la evolución histórica, las decisiones de arquitectura
   - `python -m ruff check .`: sin advertencias ni errores.
   - `python -m compileall -q .`: compilación correcta; smoke de imports con 17 rutas FastAPI registradas.
   - Alembic: `upgrade head`, `check`, `downgrade base` y SQL offline PostgreSQL sin errores; head vigente `c4c813450fd6`.
-  - Seed ejecutado dos veces sobre SQLite temporal: 25 palabras y 5 crucigramas insertados, luego 25 y 5 omitidos.
+   - Seed ejecutado dos veces sobre SQLite temporal: 25 palabras y 5 crucigramas insertados, luego 25 y 5 omitidos.
+
+---
+
+## 🎨 Etapa 3 (Frontend): TAREA 1 y TAREA 2 — Estructura Base/PWA y Sistema Cromático (Noviembre 2026)
+- **Estado:** Completada y validada.
+- **TAREA 1 — Estructura Base Frontend y PWA:**
+  - Layout Jinja2 modular en `templates/base.html` con `templates/index.html` y parciales `partials/header.html`, `partials/footer.html` y `partials/theme_switcher.html`; idioma `es`, viewport mobile-first, enlace al manifest, iconos y meta `theme-color`.
+  - `app/main.py` registra `Jinja2Templates`, monta `StaticFiles` en `/static`, expone la ruta raíz `/` con el contexto de temas de `app/core/themes.py` y registra el MIME `font/woff2` para que los navegadores carguen la fuente local sin advertencias.
+  - Tailwind CSS 3.4.17 integrado sin CDN: `tailwind.config.js` escanea plantillas y JS, `static/css/tailwind-input.css` es la entrada y `npm run build:css` genera `static/css/tailwind.css` autocontenido para uso offline.
+  - `static/manifest.json`: nombre `Cruciword`, `display: standalone`, `orientation: any`, `start_url: /`, `scope: /` y colores `#F7EFD9` acordes al tema base; iconos `icon.svg`, `icon-192.png`, `icon-512.png` e `icon-maskable-512.png`.
+  - `static/sw.js`: precaché de shell, CSS, JS, fuentes, iconos y manifest; estrategia **Cache-First** para assets estáticos, fallback transparente a la copia cacheada de `/` en navegaciones y paso directo de `/api/` para no inventar respuestas offline; se omite el precaché de datos dinámicos para no simular progreso.
+  - `static/js/storage.js` centraliza `localStorage` bajo `cruciword:theme`, `cruciword:progress` y `cruciword:sync-queue`, con API para guardar progreso por crucigrama y encolar/colgar envíos pendientes sin perder datos al quedarse sin red.
+  - `static/js/theme-init.js` aplica el tema guardado antes del primer pintado; `static/js/theme.js` conmuta temas sin recargar y sincroniza `aria-pressed` y el `meta[name="theme-color"]`; `static/js/app.js` registra el service worker y muestra un estado de conexión discreto, sin notificaciones persecutorias.
+- **TAREA 2 — Sistema Cromático 60-30-10 y Estética Cómic:**
+  - Balsamiq Sans 400/700 alojada en `static/fonts/` (latin y latin-ext, WOFF2) con su licencia OFL; `static/css/themes.css` declara los `@font-face` y la aplica a toda la interfaz con groteso amplio y interlineado cómodo para niños y adultos mayores.
+  - Tokens por tema en `themes.css`: 60% de fondo cálido (`--cw-bg`), 30% de tarjetas y celdas (`--cw-card`, `--cw-cell: #ffffff` con `--cw-cell-ink: #000000`) y 10% de acento (`--cw-accent`) reservado a foco, palabra activa y aciertos.
+  - Tres temas ambientales conmutables en caliente: **Papel Crema** (por defecto, `#F7EFD9`), **Edición Domingo** (`#F0EBE1`) y **Pizarra Nocturna** (`#1C1E1B`, mate); contraste AAA verificado para texto sobre fondo y tarjetas (16.4:1, 14.6:1 y 14.9:1 respectivamente; 21:1 en celdas blancas con tinta negra).
+  - Estética de revista de pasatiempos: bordes sólidos de `2px`, sombras duras `3px 3px 0`, bocadillo de pista con cola, títulos en imprenta mayúscula, focos visibles de `3px` y controles de al menos `48px`; se respeta `prefers-reduced-motion`.
+  - Sin APIs externas de IA ni CDNs en tiempo de ejecución: pistas, fuentes, iconos y estilos salen del propio servidor; el avance sigue siendo libre y a demanda (modelo Pull).
+- **Verificación de cierre:**
+  - `python -m pytest -q`: 92 tests pasados (17 nuevos en `tests/test_frontend.py`).
+  - `python -m ruff check .`: sin advertencias ni errores; `python -m compileall -q app tests`: correcto.
+  - `node --check` sobre los cuatro JS: sintaxis válida.
+  - Smoke con `uvicorn` real: `/`, `/static/manifest.json`, CSS de Tailwind y temas, `storage.js`, `sw.js`, `icon.svg` y WOFF2 responden `200`; la fuente se sirve como `font/woff2`.
+   - Pendiente para TAREA 3: `HU-04` (teclado virtual A-Z de teclas grandes) y la integración de partidas con el backend.
+
+---
+
+## Etapa 4: Niveles A1-C1, grillas coherentes y verificación instantánea (Noviembre 2026)
+- **Estado:** Completada y validada.
+- **TAREA 1 — Consolidación de niveles y grillas matemáticamente coherentes:**
+  - `app/data/grids.py` centraliza cinco especificaciones puras, una por nivel: A1 `5x5` con `APPLE`/`CAT`, A2 `6x6` con `HOUSE`/`FOOD`/`FRIEND`, B1 `7x7` con `JOURNEY`/`MEMORY`/`MARKET`/`WEATHER`, B2 `11x11` con `ACHIEVEMENT`/`RELIABLE`/`ESTIMATE`/`PERSPECTIVE` y C1 `13x13` con `SOPHISTICATED`/`RESILIENT`/`NUANCE`/`AMBIGUITY`.
+  - `build_grid_data()` deriva `grid_size`, `clues`, `placements` y `blocked_cells` desde posiciones explícitas; `validate_grid_data()` rechaza palabras fuera de límites, cruces incompatibles, longitudes inconsistentes y bloqueos que no corresponden a celdas ocupadas.
+  - `app/db/seed.py` reutiliza el mismo builder, manteniendo 25 palabras y 5 crucigramas idempotentes; la migración data-only `9f2a6c1d4b70` reemplaza `grid_data` en bases ya sembradas y su `downgrade()` restaura las grillas anteriores.
+  - Las pistas y sinónimos salen del banco léxico local; no hay llamadas a IA externa ni generación en tiempo de ejecución.
+- **TAREA 2 — Verificación instantánea, feedback y puntuación sin fricción:**
+  - `POST /api/puzzles/{puzzle_id}/check` valida letras y palabras en el servidor, sin autenticación ni persistencia, y devuelve estados booleanos por letra; nunca devuelve las soluciones.
+  - `static/js/board.js` renderiza la grilla real desde `GET /api/puzzles/{id}`, permite filtrar por A1-C1, enfocar pistas, y verifica cada cambio de `cruciword:boardchange` con un debounce técnico de `120ms` (sin cronómetro visible).
+  - `static/css/themes.css` añade esmeralda `--cw-success: #075c43` para aciertos y amarillo `--cw-attention: #f5c518` para letras que necesitan otra mirada, con textos AAA en los tres temas; no hay rojo, penalizaciones ni mensajes de fallo.
+  - La mejor marca vive en `cruciword:progress` (`bestScore`) para jugar sin cuenta y se refleja en `UserProgress` al sincronizar; `score`, `is_completed` y `power_badge_earned` nunca retroceden.
+  - `static/sw.js` sube a `cruciword-static-v3` y precachea `board.js`; el tablero mantiene fallback server-side en Jinja para lectores sin JS.
+- **Verificación de cierre:**
+  - `python -m pytest -q`: 121 tests pasados (nuevos `tests/test_grid_specs.py`, contratos `/check`, puntuación personal, contraste AAA y controles de nivel).
+  - `python -m ruff check .`: sin advertencias ni errores; `python -m compileall -q app tests`: correcto.
+  - `node --check` sobre `board.js`, `api.js` y `keyboard.js`: sintaxis válida.
+  - Smoke de Alembic en SQLite temporal: `upgrade head`, `downgrade -1`, `upgrade head` y seed posterior; `placements` presente tras la última subida.
+
+---
+
+## 🎯 Etapa 3 (Frontend): TAREA 3 y TAREA 4 — Maquetación adaptativa, teclado y sincronización PWA (Noviembre 2026)
+- **Estado:** Completada y validada.
+- **TAREA 3 — Maquetación Fluida y Adaptativa (Mobile-First):**
+  - `templates/index.html` incorpora tres parciales nuevos: `partials/game_demo.html` (tablero de práctica y bocadillo de pista activo), `partials/virtual_keyboard.html` (A–Z) y `partials/auth_panel.html` (acceso opcional en la portada, sin diálogos que interrumpan).
+  - `static/js/keyboard.js` cierra `HU-04` a nivel de interfaz: 26 teclas grandes en mayúsculas, escritura por toque y simultáneamente por teclado físico (`A-Z`, `Backspace`/`Delete`, flechas, `Home`/`End`); ignora atajos con modificadores y nunca captura teclas dentro de formularios o campos editables.
+  - Cada celda y tecla mide al menos `48x48px`; la celda activa se marca con el acento 10% y `aria-current`, con estados anunciados por `role="status"` y mensajes alentadores sin cronómetros.
+  - `static/js/audio.js` activa la lectura de pistas solo bajo clic del usuario mediante `SpeechSynthesisUtterance` del navegador (`en-US`, velocidad `0.85` para niños y adultos mayores); alterna `aria-pressed`, guarda la preferencia en `cruciword:clues-audio` y no realiza ninguna llamada de red ni a IA externa.
+  - `static/css/themes.css` añade una grilla de teclado de `5` columnas desde 360px, `9` en `sm` y `13` en `lg`, con `min-width:0`, `overflow-wrap`, `[hidden]`, focos visibles y sombras duras; el bocadillo activo usa borde grueso del color de acento sin romper la regla 60-30-10 ni los tres temas ambientales.
+- **TAREA 4 — Conexión PWA con Autenticación y Sincronización de Estado:**
+  - `static/js/api.js` centraliza `fetch` JSON con cabecera `Authorization: Bearer` cuando hay sesión: `register` (crea cuenta y entra automáticamente con el endpoint existente), `login`, `restoreSession` (`GET /api/users/me`), `loadPuzzles` (`GET /api/puzzles`) y `submitProgress` (`POST /api/puzzles/{id}/progress` con `power_mode_used: false`, `hints_used: 0` y clave `1_across`). El token vive en `cruciword:session` y nunca se registra en consolas ni mensajes.
+  - `static/js/storage.js` incorpora `session` y `audio`, reutiliza `cruciword:progress` y `cruciword:sync-queue`. Si no hay red o el token devuelve `401`, la partida se guarda localmente y se encola; al volver la conexión o al entrar, `flushQueue()` drena la cola sin interrumpir al usuario, elimina solo respuestas `2xx` y ante `401` limpia la sesión invitando a entrar de nuevo sin bloquear el juego.
+  - `static/js/app.js` dispara la sincronización al arrancar y en el evento `online`; `static/sw.js` sube a `cruciword-static-v2` y precachea `api.js`, `audio.js` y `keyboard.js`, manteniendo `/api/` fuera de la caché para no falsificar respuestas offline.
+  - **Decisión de alcance:** no se añadió backend ni un `GET` de progreso porque la Etapa 2 solo expone escritura; el tablero sigue siendo una demo local que no hardcodea soluciones y envía las letras tecleadas al endpoint real para que el servidor evalúe con mensajes amables. La lectura remota de estado y la grilla real con ubicación de pistas quedan para una ampliación futura de la API.
+- **Verificación de cierre:**
+  - `python -m pytest -q`: 103 tests pasados (11 nuevos en `tests/test_frontend.py`).
+  - `python -m ruff check .`: sin advertencias ni errores; `python -m compileall -q app tests`: correcto; Tailwind recompilado sin CDN.
+  - `node --check` sobre los siete JS y arnés Node con DOM simulado: la partida offline quedó encolada, se drenó al recuperar red y envió el payload con `Bearer` y `power_mode_used: false`.
+  - Smoke con `uvicorn` sobre Base SQLite temporal (borrada al finalizar): `/`, nuevos JS/CSS, `sw.js` y manifest en `200`; `register` `201`, `login` `200`, `GET /api/users/me` `200` y `POST /api/puzzles/1/progress` `200`.
+  - El progreso devuelve `completed: false` porque la demo envía una sola palabra mientras el crucigrama semilla espera dos respuestas; el feedback sigue siendo informativo y no punitivo.
+  - Trazabilidad: cerrados `HU-04` (teclado A-Z), `HU-01` (acceso opcional) y reforzados `RNF-01`, `RNF-02` y `RNF-03`.
 
 ---
 
@@ -86,4 +155,30 @@ Este documento recopila la evolución histórica, las decisiones de arquitectura
 
 ---
 
+
+## 🎨 Etapa 3: Interfaz Responsiva Multi-dispositivo y PWA (Noviembre 2026)
+
+- **Estado:** Completada y validada.
+- **Resumen Ejecutivo:** Implementación de la Interfaz Responsiva Multi-Dispositivo y PWA de *Cruciword* bajo estrictas directrices de arquitectura: cero llamadas a APIs externas de inteligencia artificial en tiempo de ejecución, diseño inclusivo y accesible (adaptado para niños y adultos mayores con tipografía amigable y alto contraste AAA), filosofía *pull* sin cronómetros punitivos, y soporte para funcionamiento offline mediante Service Worker y persistencia local.
+- **Hitos alcanzados:**
+  - **Estructura Base Frontend y PWA:**
+    - Configuración del layout base modular en plantillas con Tailwind CSS compilado localmente.
+    - Implementación del manifiesto (`static/manifest.json`) configurado en modo *standalone* con íconos limpios y la paleta cromática del proyecto.
+    - Creación del Service Worker (`static/sw.js`) con estrategia *Cache-First* para assets estáticos y funcionamiento offline transparente.
+    - Módulo `static/js/storage.js` para la persistencia local de preferencias de tema, estado de partidas y cola de sincronización.
+  - **Sistema Cromático (60-30-10), Tipografía e Identidad Visual:**
+    - Integración local de la tipografía gratuita y accesible Balsamiq Sans (`static/fonts/`), garantizando una lectura óptima y una estética de revista de pasatiempos.
+    - Definición en `static/css/themes.css` de tres temas ambientales conmutables en tiempo real (*Papel Crema*, *Edición Domingo* y *Pizarra Nocturna*) aplicando la regla cromática 60-30-10, bordes sólidos de 2px y sombras duras (`3px 3px 0px #1E293B`).
+  - **Maquetación Adaptativa y Ergonomía Táctil (Mobile-First):**
+    - Diseño fluido sin desbordamientos horizontales desde 360px (móviles) hasta pantallas de escritorio.
+    - Áreas táctiles garantizadas $\ge 48\text{px}$ tanto en celdas como en botones interactivos.
+  - **Conectividad y Sincronización Base:**
+    - Implementación del cliente `static/js/api.js` preparado para interactuar con los endpoints de autenticación y sincronización de estado del backend.
+    - Mecanismo de reintento en segundo plano (`flushQueue` en `storage.js`) para manejar el estado de partidas de forma resiliente ante cortes de conectividad.
+- **Validación de Calidad:**
+  - Verificación estática y compilación de assets limpios.
+  - Pruebas de compatibilidad responsiva en maquetación fluida.
+
+
+---
 
