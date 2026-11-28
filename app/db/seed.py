@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.data.grids import GRID_SPECS, build_grid_data
 from app.db.database import SessionLocal
 from models import Level, Puzzle, Word
 
@@ -19,16 +19,6 @@ class SeedWord:
     definition_en: str
     synonym_hint: str
     is_power: bool = False
-
-
-@dataclass(frozen=True)
-class SeedClue:
-    number: int
-    direction: Literal["across", "down"]
-    clue_text: str
-    static_hint: str
-    length: int
-    answer: str
 
 
 @dataclass(frozen=True)
@@ -76,74 +66,14 @@ SEED_WORDS: tuple[SeedWord, ...] = (
 )
 
 
-def _grid_data(*clues: SeedClue) -> dict[str, object]:
-    return {
-        "grid_size": {"rows": 5, "cols": 5},
-        "blocked_cells": [[0, 1], [2, 3]],
-        "clues": [
-            {
-                "number": clue.number,
-                "direction": clue.direction,
-                "clue_text": clue.clue_text,
-                "static_hint": clue.static_hint,
-                "audio_url": None,
-                "length": clue.length,
-                "answer": clue.answer,
-            }
-            for clue in clues
-        ],
-        "solutions": {
-            f"{clue.number}_{clue.direction}".lower(): clue.answer for clue in clues
-        },
-    }
-
-
-SEED_PUZZLES: tuple[SeedPuzzle, ...] = (
+SEED_PUZZLES: tuple[SeedPuzzle, ...] = tuple(
     SeedPuzzle(
-        "Primeras palabras",
-        "Daily life",
-        Level.A1,
-        _grid_data(
-            SeedClue(1, "across", "A round fruit", "red fruit", 5, "APPLE"),
-            SeedClue(2, "down", "A bright day star", "daylight star", 3, "SUN"),
-        ),
-    ),
-    SeedPuzzle(
-        "Hogar y ciudad",
-        "Home",
-        Level.A2,
-        _grid_data(
-            SeedClue(1, "across", "A building where people live", "home building", 5, "HOUSE"),
-            SeedClue(2, "down", "A large town", "large town", 4, "CITY"),
-        ),
-    ),
-    SeedPuzzle(
-        "Viaje y memoria",
-        "Travel",
-        Level.B1,
-        _grid_data(
-            SeedClue(1, "across", "The act of traveling", "trip", 7, "JOURNEY"),
-            SeedClue(2, "down", "A helpful suggestion", "suggestion", 6, "ADVICE"),
-        ),
-    ),
-    SeedPuzzle(
-        "Logros y retos",
-        "Work",
-        Level.B2,
-        _grid_data(
-            SeedClue(1, "across", "Something difficult you succeed in", "success", 10, "ACHIEVEMENT"),
-            SeedClue(2, "down", "Able to be trusted", "trustworthy", 8, "RELIABLE"),
-        ),
-    ),
-    SeedPuzzle(
-        "Ideas precisas",
-        "Language",
-        Level.C1,
-        _grid_data(
-            SeedClue(1, "across", "A very small difference", "subtle difference", 6, "NUANCE"),
-            SeedClue(2, "down", "Brief and clear", "brief and clear", 7, "CONCISE"),
-        ),
-    ),
+        title=spec.title,
+        theme=spec.theme,
+        level=spec.level,
+        grid_data=build_grid_data(spec),
+    )
+    for spec in GRID_SPECS
 )
 
 

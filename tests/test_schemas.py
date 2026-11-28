@@ -8,7 +8,10 @@ from pydantic import ValidationError
 from app.schemas.auth import Token, TokenPayload
 from app.schemas.classroom import ClassroomCreate, ClassroomJoin, ClassroomResponse
 from app.schemas.puzzle import (
+    CheckResultResponse,
+    CheckSubmit,
     ClueSchema,
+    PlacementSchema,
     ProgressResultResponse,
     ProgressSubmit,
     PuzzleDetailResponse,
@@ -70,6 +73,7 @@ def test_user_response_excludes_password() -> None:
 
 def test_puzzle_detail_and_clue_validation() -> None:
     clue = ClueSchema(number=1, direction="across", clue_text="Fruit", length=5)
+    placement = PlacementSchema(clue_key="1_across", row=0, col=0, direction="across")
     puzzle = PuzzleDetailResponse(
         id=1,
         title="Frutas",
@@ -77,12 +81,14 @@ def test_puzzle_detail_and_clue_validation() -> None:
         grid_size={"rows": 5, "cols": 5},
         blocked_cells=[[0, 1], [2, 3]],
         clues=[clue],
+        placements=[placement],
     )
 
     assert clue.static_hint is None
     assert clue.audio_url is None
     assert puzzle.grid_size["rows"] == 5
     assert puzzle.blocked_cells == [[0, 1], [2, 3]]
+    assert puzzle.placements == [placement]
 
     with pytest.raises(ValidationError):
         ClueSchema(number=1, direction="diagonal", clue_text="Fruit", length=5)
@@ -95,6 +101,7 @@ def test_puzzle_detail_and_clue_validation() -> None:
             grid_size={"rows": 5, "cols": 5},
             blocked_cells=[],
             clues=[clue],
+            placements=[placement],
         )
 
 
@@ -105,11 +112,27 @@ def test_progress_contracts() -> None:
         correct_words=["APPLE"],
         incorrect_words=[],
         power_badge_earned=True,
+        score=1,
+        total_words=1,
+        best_score=1,
+        improved=True,
         message="¡Buen trabajo, sigue así!",
+    )
+    check = CheckResultResponse(
+        completed=False,
+        correct_words=[],
+        incorrect_words=["1_across"],
+        letters={"1_across": [True, False]},
+        score=0,
+        total_words=1,
+        message="Sigue a tu ritmo.",
     )
 
     assert submit.answers["1_across"] == "APPLE"
     assert result.power_badge_earned is True
+    assert result.best_score == 1
+    assert "answer" not in check.model_dump_json()
+    assert CheckSubmit(answers={"1_across": "AP"}).answers == {"1_across": "AP"}
 
     with pytest.raises(ValidationError):
         ProgressSubmit(answers={"1_across": 5}, power_mode_used=False)

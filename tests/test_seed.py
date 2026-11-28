@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.data.grids import GRID_SPECS
 from app.db.seed import SEED_PUZZLES, SEED_WORDS, seed
 from models import Level, Puzzle, Word
 
@@ -32,8 +33,15 @@ def test_seed_loads_words_and_puzzles_for_all_levels(
     }
     assert all(word.synonym_hint for word in words)
     assert all(word.definition_en for word in words)
+    assert {puzzle.title for puzzle in puzzles} == {spec.title for spec in GRID_SPECS}
     assert all("solutions" in puzzle.grid_data for puzzle in puzzles)
+    assert all("placements" in puzzle.grid_data for puzzle in puzzles)
     assert all("static_hint" in clue for puzzle in puzzles for clue in puzzle.grid_data["clues"])
+    assert all(
+        clue["length"] == len(puzzle.grid_data["solutions"][f"{clue['number']}_{clue['direction']}".lower()])
+        for puzzle in puzzles
+        for clue in puzzle.grid_data["clues"]
+    )
 
 
 def test_seed_is_idempotent(

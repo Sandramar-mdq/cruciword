@@ -23,7 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from app.db.database import Base
 
 
 class UserRole(str, Enum):
@@ -73,6 +73,23 @@ student_classrooms = Table(
     ),
 )
 
+word_list_words = Table(
+    "word_list_words",
+    Base.metadata,
+    Column(
+        "word_list_id",
+        Integer,
+        ForeignKey("word_lists.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "word_id",
+        Integer,
+        ForeignKey("words.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -108,6 +125,11 @@ class User(Base):
         back_populates="students",
         passive_deletes=True,
     )
+    word_lists: Mapped[list[WordList]] = relationship(
+        back_populates="teacher",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     progress: Mapped[list[UserProgress]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
@@ -126,6 +148,7 @@ class Classroom(Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     invite_code: Mapped[str] = mapped_column(
         String(24),
         unique=True,
@@ -149,10 +172,18 @@ class Classroom(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    word_lists: Mapped[list[WordList]] = relationship(
+        back_populates="classroom",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class Word(Base):
     __tablename__ = "words"
+    __table_args__ = (
+        UniqueConstraint("word", "level", name="uq_word_word_level"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     word: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
@@ -175,9 +206,49 @@ class Word(Base):
     )
     sponsored_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
+    word_lists: Mapped[list[WordList]] = relationship(
+        secondary=word_list_words,
+        back_populates="words",
+    )
+
+
+class WordList(Base):
+    __tablename__ = "word_lists"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    teacher_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    classroom_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("classrooms.id", ondelete="CASCADE"),
+        index=True,
+        nullable=True,
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    teacher: Mapped[User] = relationship(back_populates="word_lists")
+    classroom: Mapped[Classroom | None] = relationship(back_populates="word_lists")
+    words: Mapped[list[Word]] = relationship(
+        secondary=word_list_words,
+        back_populates="word_lists",
+    )
+
 
 class Puzzle(Base):
     __tablename__ = "puzzles"
+    __table_args__ = (
+        UniqueConstraint("title", "level", name="uq_puzzle_title_level"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     theme: Mapped[str] = mapped_column(String(60), index=True, nullable=False)
@@ -211,6 +282,10 @@ class UserProgress(Base):
         UniqueConstraint("user_id", "puzzle_id", name="uq_user_progress_user_puzzle"),
         CheckConstraint("score >= 0", name="ck_user_progress_score_non_negative"),
         CheckConstraint("hints_used >= 0", name="ck_user_progress_hints_used_non_negative"),
+        CheckConstraint(
+            "retention_score IS NULL OR retention_score >= 0",
+            name="ck_user_progress_retention_score_non_negative",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -238,6 +313,17 @@ class UserProgress(Base):
         default=0,
         server_default="0",
         nullable=False,
+    )
+    power_badge_earned: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=false(),
+        nullable=False,
+    )
+    retention_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    retention_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

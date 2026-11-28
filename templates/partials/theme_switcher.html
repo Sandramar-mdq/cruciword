@@ -1,0 +1,13 @@
+<div class="cw-theme-switcher" role="group" aria-label="Tema ambiental">
+  {% for theme in themes %}
+  <button
+    type="button"
+    class="cw-theme-button"
+    data-theme-choice="{{ theme.id }}"
+    title="{{ theme.hint }}"
+    aria-pressed="{% if theme.id == default_theme %}true{% else %}false{% endif %}"
+  >
+    {{ theme.label }}
+  </button>
+  {% endfor %}
+</div>

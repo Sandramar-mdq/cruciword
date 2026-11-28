@@ -16,6 +16,15 @@ class ClueSchema(BaseModel):
     length: int
 
 
+class PlacementSchema(BaseModel):
+    """Posición de una palabra dentro de la grilla."""
+
+    clue_key: str
+    row: int
+    col: int
+    direction: Literal["across", "down"]
+
+
 class PuzzleSummary(BaseModel):
     """Resumen ligero de un crucigrama para listados."""
 
@@ -35,6 +44,7 @@ class PuzzleDetailResponse(BaseModel):
     grid_size: dict[str, int]
     blocked_cells: list[list[int]]
     clues: list[ClueSchema]
+    placements: list[PlacementSchema]
 
 
 class ProgressSubmit(BaseModel):
@@ -52,6 +62,28 @@ class ProgressResultResponse(BaseModel):
     correct_words: list[str]
     incorrect_words: list[str]
     power_badge_earned: bool
+    score: int
+    total_words: int
+    best_score: int
+    improved: bool
+    message: str
+
+
+class CheckSubmit(BaseModel):
+    """Respuestas temporales para verificación instantánea sin guardarlas."""
+
+    answers: dict[str, str]
+
+
+class CheckResultResponse(BaseModel):
+    """Estado por letra y palabra; no incluye las soluciones."""
+
+    completed: bool
+    correct_words: list[str]
+    incorrect_words: list[str]
+    letters: dict[str, list[bool]]
+    score: int
+    total_words: int
     message: str
 
 

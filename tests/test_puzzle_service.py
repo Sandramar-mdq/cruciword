@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.services.puzzle_service import evaluate_progress
+from app.services.puzzle_service import check_answers, evaluate_progress
 
 
 def _grid_data() -> dict[str, object]:
@@ -73,3 +73,38 @@ def test_solutions_fallback_from_clues() -> None:
 
     assert result.completed is True
     assert result.correct_words == ["3_down"]
+
+
+def test_personal_best_only_grows() -> None:
+    answers = {"1_across": "APPLE", "2_down": "GIVE UP"}
+
+    first = evaluate_progress(_grid_data(), answers, previous_best=0)
+    second = evaluate_progress(_grid_data(), answers, previous_best=2)
+
+    assert first.score == 2
+    assert first.best_score == 2
+    assert first.improved is True
+    assert "marca personal" in first.message
+    assert second.best_score == 2
+    assert second.improved is False
+
+
+def test_check_answers_marks_letters_without_revealing_solutions() -> None:
+    result = check_answers(
+        _grid_data(),
+        {"1_across": "APXLE", "2_down": "GIVE UP"},
+    )
+
+    assert result.letters["1_across"] == [True, True, False, True, True]
+    assert result.correct_words == ["2_down"]
+    assert result.incorrect_words == ["1_across"]
+    assert result.score == 1
+    assert "APPLE" not in result.model_dump_json()
+
+
+def test_check_answers_marks_missing_words_as_pending() -> None:
+    result = check_answers(_grid_data(), {"1_across": "APPLE"})
+
+    assert result.letters["2_down"] == [False] * 6
+    assert result.correct_words == ["1_across"]
+    assert result.completed is False

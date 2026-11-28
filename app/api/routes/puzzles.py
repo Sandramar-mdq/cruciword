@@ -10,7 +10,10 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.schemas.puzzle import (
+    CheckResultResponse,
+    CheckSubmit,
     ClueSchema,
+    PlacementSchema,
     ProgressResultResponse,
     ProgressSubmit,
     PuzzleDetailResponse,
@@ -18,7 +21,7 @@ from app.schemas.puzzle import (
     RetentionResultResponse,
     RetentionSubmit,
 )
-from app.services.puzzle_service import evaluate_progress
+from app.services.puzzle_service import check_answers, evaluate_progress
 from models import Level, Puzzle, User, UserProgress
 
 router = APIRouter()
@@ -82,6 +85,35 @@ def _clues(grid_data: dict[str, object]) -> list[ClueSchema]:
     return clues
 
 
+def _placements(grid_data: dict[str, object]) -> list[PlacementSchema]:
+    """Extrae las posiciones de palabras sin incluir sus respuestas."""
+    raw = grid_data.get("placements")
+    placements: list[PlacementSchema] = []
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            clue_key = item.get("clue_key")
+            row = item.get("row")
+            col = item.get("col")
+            direction = item.get("direction")
+            if (
+                isinstance(clue_key, str)
+                and isinstance(row, int)
+                and isinstance(col, int)
+                and direction in {"across", "down"}
+            ):
+                placements.append(
+                    PlacementSchema(
+                        clue_key=clue_key,
+                        row=row,
+                        col=col,
+                        direction=direction,
+                    )
+                )
+    return placements
+
+
 def _get_puzzle_or_404(db: Session, puzzle_id: int) -> Puzzle:
     """Devuelve un crucigrama o lanza 404."""
     puzzle = db.get(Puzzle, puzzle_id)
@@ -103,6 +135,7 @@ def _to_detail(puzzle: Puzzle) -> PuzzleDetailResponse:
         grid_size=_grid_size(grid_data),
         blocked_cells=_blocked_cells(grid_data),
         clues=_clues(grid_data),
+        placements=_placements(grid_data),
     )
 
 
@@ -155,6 +188,17 @@ def get_puzzle(
     return _to_detail(_get_puzzle_or_404(db, puzzle_id))
 
 
+@router.post("/{puzzle_id}/check", response_model=CheckResultResponse)
+def check_puzzle(
+    puzzle_id: int,
+    payload: CheckSubmit,
+    db: Annotated[Session, Depends(get_db)],
+) -> CheckResultResponse:
+    """Verifica letras y palabras sin iniciar sesión ni guardar respuestas."""
+    puzzle = _get_puzzle_or_404(db, puzzle_id)
+    return check_answers(puzzle.grid_data, payload.answers)
+
+
 @router.post("/{puzzle_id}/progress", response_model=ProgressResultResponse)
 def submit_progress(
     puzzle_id: int,
@@ -164,19 +208,21 @@ def submit_progress(
 ) -> ProgressResultResponse:
     """Valida respuestas, guarda el progreso y devuelve feedback amable."""
     puzzle = _get_puzzle_or_404(db, puzzle_id)
+    progress = _get_or_create_progress(db, current_user.id, puzzle_id)
+    previous_best = progress.score or 0
+
     result = evaluate_progress(
         puzzle.grid_data,
         payload.answers,
         payload.hints_used,
         payload.power_mode_used,
+        previous_best,
     )
 
-    progress = _get_or_create_progress(db, current_user.id, puzzle_id)
-
-    progress.is_completed = result.completed
-    progress.score = len(result.correct_words)
+    progress.is_completed = bool(progress.is_completed) or result.completed
+    progress.score = result.best_score
     progress.hints_used = payload.hints_used
-    progress.power_badge_earned = result.power_badge_earned
+    progress.power_badge_earned = bool(progress.power_badge_earned) or result.power_badge_earned
     db.commit()
 
     return result

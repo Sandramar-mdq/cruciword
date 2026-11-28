@@ -1,0 +1,117 @@
+<section
+  class="cw-card cw-demo"
+  id="juego"
+  aria-labelledby="demo-titulo"
+  data-demo-board
+  data-puzzle-id="1"
+  inputmode="none"
+>
+  <div class="cw-demo-head">
+    <div>
+      <p class="cw-kicker">Partida de práctica</p>
+      <h2 class="cw-subtitle" id="demo-titulo">Escribe la palabra</h2>
+    </div>
+    <button
+      type="button"
+      class="cw-button cw-audio-button"
+      data-clue-audio
+      aria-pressed="false"
+      aria-label="Escuchar la pista en voz alta"
+    >
+      ESCUCHAR PISTA
+    </button>
+  </div>
+
+  <div class="cw-demo-filters">
+    <label class="cw-field-label" for="cw-level-select">Nivel</label>
+    <select id="cw-level-select" data-level-select>
+      <option value="A1">A1 · Primeras palabras</option>
+      <option value="A2">A2 · Hogar y ciudad</option>
+      <option value="B1">B1 · Viaje y memoria</option>
+      <option value="B2">B2 · Logros y retos</option>
+      <option value="C1">C1 · Ideas precisas</option>
+    </select>
+    <label class="cw-field-label" for="cw-puzzle-select">Crucigrama</label>
+    <select id="cw-puzzle-select" data-puzzle-select>
+      <option value="1">Primeras palabras · A1</option>
+    </select>
+  </div>
+
+  <div
+    class="cw-speech cw-speech--active"
+    data-clue-text="{{ preview_grid.clues[0].clue_text }}"
+    data-clue-audio-text="{{ preview_grid.clues[0].clue_text }}"
+  >
+    <span class="cw-kicker" data-clue-number>Pista {{ preview_grid.clues[0].number }} · sinónimo en inglés</span>
+    <p data-clue-copy>{{ preview_grid.clues[0].clue_text }}</p>
+  </div>
+
+  <ul class="cw-clue-list" data-clue-list aria-label="Pistas del crucigrama">
+    {% for clue in preview_grid.clues %}
+    <li>
+      <button
+        type="button"
+        class="cw-clue"
+        data-focus-clue="{{ clue.number }}_{{ clue.direction }}"
+      >
+        <strong>{{ clue.number }} · {{ "HORIZONTAL" if clue.direction == "across" else "VERTICAL" }}</strong>
+        {{ clue.clue_text }}
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% set ns = namespace(index=0) %}
+  <div
+    class="cw-grid cw-grid--demo cw-grid--dynamic"
+    data-board-grid
+    role="group"
+    aria-label="Celdas del crucigrama"
+    style="--cw-grid-cols: {{ preview_grid.grid_size.cols }}"
+  >
+    {% for row in range(preview_grid.grid_size.rows) %}
+      {% for col in range(preview_grid.grid_size.cols) %}
+        {% set keys = namespace(values=[]) %}
+        {% for placement in preview_grid.placements if placement.row == row and placement.col == col %}
+          {% set keys.values = keys.values + [placement.clue_key] %}
+        {% endfor %}
+        {% if [row, col] in preview_grid.blocked_cells %}
+        <div
+          class="cw-cell cw-cell--blocked"
+          data-row="{{ row }}"
+          data-col="{{ col }}"
+          aria-hidden="true"
+        ></div>
+        {% else %}
+        <button
+          type="button"
+          class="cw-cell cw-cell--button"
+          data-cell-index="{{ ns.index }}"
+          data-row="{{ row }}"
+          data-col="{{ col }}"
+          data-clue-keys="{{ keys.values|join(' ') }}"
+          aria-label="Fila {{ row + 1 }}, columna {{ col + 1 }}"
+        ></button>
+        {% set ns.index = ns.index + 1 %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <p id="cw-keyboard-status" class="cw-feedback" role="status" aria-live="polite">
+    Toca una celda y escribe con el teclado QWERTY o con tu teclado físico. ⇄ cambia la dirección y ✓ comprueba sin prisa.
+  </p>
+  <p id="cw-check-status" class="cw-feedback" data-check-status role="status" aria-live="polite">
+    Escribe y pulsa ✓ cuando quieras ver tu avance.
+  </p>
+  <p id="cw-score-status" class="cw-status" data-score-status>
+    Tu mejor marca: 0 de {{ preview_grid.clues|length }} palabras.
+  </p>
+
+  {% include "partials/virtual_keyboard.html" %}
+
+  <div class="cw-demo-actions">
+    <button type="button" class="cw-button" data-save-progress>GUARDAR MI PROGRESO</button>
+    <p id="cw-sync-status" class="cw-feedback" role="status" aria-live="polite"></p>
+  </div>
+</section>

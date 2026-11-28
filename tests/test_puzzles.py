@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.data.grids import GRID_SPECS, build_grid_data
 from models import Level, Puzzle, UserProgress
 
 
@@ -41,13 +42,14 @@ def _seed_puzzle(
     title: str = "Frutas",
     level: Level = Level.A1,
     classroom_id: int | None = None,
+    grid_data: dict[str, object] | None = None,
 ) -> int:
     with session_factory() as db:
         puzzle = Puzzle(
             title=title,
             theme="Día Soleado",
             level=level,
-            grid_data=_grid_data(),
+            grid_data=grid_data or _grid_data(),
             classroom_id=classroom_id,
         )
         db.add(puzzle)
@@ -236,3 +238,68 @@ def test_progress_with_wrong_answers_is_encouraging(
     assert body["completed"] is False
     assert body["incorrect_words"] == ["2_down"]
     assert "sin prisa" in body["message"]
+
+
+def test_puzzle_detail_exposes_placements_without_answers(
+    test_env: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = test_env
+    puzzle_id = _seed_puzzle(
+        session_factory,
+        title="Primeras palabras",
+        grid_data=build_grid_data(GRID_SPECS[0]),
+    )
+
+    body = client.get(f"/api/puzzles/{puzzle_id}").json()
+
+    assert len(body["placements"]) == 2
+    assert {item["direction"] for item in body["placements"]} == {"across", "down"}
+    assert all("answer" not in item for item in body["clues"])
+    assert "solutions" not in body
+
+
+def test_check_is_open_and_does_not_persist(
+    test_env: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = test_env
+    puzzle_id = _seed_puzzle(session_factory)
+
+    response = client.post(
+        f"/api/puzzles/{puzzle_id}/check",
+        json={"answers": {"1_across": "APXLE", "2_down": "GIVE UP"}},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["letters"]["1_across"] == [True, True, False, True, True]
+    assert body["incorrect_words"] == ["1_across"]
+    with session_factory() as db:
+        assert db.scalar(select(UserProgress)) is None
+
+
+def test_progress_keeps_personal_best_and_completion(
+    test_env: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, session_factory = test_env
+    headers = _auth_headers(client)
+    puzzle_id = _seed_puzzle(session_factory)
+    url = f"/api/puzzles/{puzzle_id}/progress"
+    complete = {"answers": {"1_across": "APPLE", "2_down": "GIVE UP"}}
+
+    first = client.post(url, headers=headers, json={**complete, "power_mode_used": False})
+    second = client.post(
+        url,
+        headers=headers,
+        json={
+            "answers": {"1_across": "APPLE", "2_down": "WRONG"},
+            "power_mode_used": False,
+        },
+    )
+
+    assert first.json()["improved"] is True
+    assert second.json()["best_score"] == 2
+    with session_factory() as db:
+        progress = db.scalar(select(UserProgress))
+        assert progress is not None
+        assert progress.score == 2
+        assert progress.is_completed is True

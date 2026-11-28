@@ -1,0 +1,47 @@
+<div
+  class="cw-keyboard"
+  role="group"
+  aria-label="Teclado virtual QWERTY"
+  inputmode="none"
+>
+  {% set rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"] %}
+  {% for row in rows %}
+    {% for letter in row %}
+    <button
+      type="button"
+      class="cw-key min-h-[48px] min-w-[48px]"
+      data-key="{{ letter }}"
+      aria-label="Letra {{ letter }}"
+    >
+      {{ letter }}
+    </button>
+    {% endfor %}
+  {% endfor %}
+  <button
+    type="button"
+    class="cw-key cw-key--control cw-key--backspace min-h-[48px] min-w-[48px]"
+    data-key-action="backspace"
+    aria-label="Borrar la última letra"
+  >
+    <span class="cw-key__glyph" aria-hidden="true">⌫</span>
+    <span class="cw-key__caption" aria-hidden="true">BORRAR</span>
+  </button>
+  <button
+    type="button"
+    class="cw-key cw-key--control cw-key--direction min-h-[48px] min-w-[48px]"
+    data-key-action="toggle-direction"
+    aria-label="Cambiar dirección de la palabra"
+  >
+    <span class="cw-key__glyph" aria-hidden="true">⇄</span>
+    <span class="cw-key__caption" aria-hidden="true">CAMBIAR</span>
+  </button>
+  <button
+    type="button"
+    class="cw-key cw-key--control cw-key--check min-h-[48px] min-w-[48px]"
+    data-key-action="check"
+    aria-label="Comprobar respuestas"
+  >
+    <span class="cw-key__glyph" aria-hidden="true">✓</span>
+    <span class="cw-key__caption" aria-hidden="true">COMPROBAR</span>
+  </button>
+</div>

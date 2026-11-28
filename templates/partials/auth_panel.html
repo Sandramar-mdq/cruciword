@@ -1,0 +1,39 @@
+<section class="cw-card" id="acceso" aria-labelledby="acceso-titulo">
+  <p class="cw-kicker">Opcional</p>
+  <h2 class="cw-subtitle" id="acceso-titulo">Guarda tu progreso</h2>
+  <p class="cw-lead">
+    Puedes jugar sin cuenta. Si quieres llevar tus partidas a otro dispositivo, entra o crea
+    una cuenta cuando tú quieras.
+  </p>
+
+  <form class="cw-auth-form" data-auth-form>
+    <label for="cw-usuario">USUARIO</label>
+    <input
+      id="cw-usuario"
+      name="username"
+      type="text"
+      autocomplete="username"
+      required
+    />
+
+    <label for="cw-clave">CONTRASEÑA</label>
+    <input
+      id="cw-clave"
+      name="password"
+      type="password"
+      autocomplete="current-password"
+      minlength="6"
+      required
+    />
+
+    <div class="cw-actions">
+      <button type="submit" class="cw-button" data-auth-submit="login">ENTRAR</button>
+      <button type="submit" class="cw-button" data-auth-submit="register">CREAR CUENTA</button>
+      <button type="button" class="cw-button" data-auth-logout hidden>SALIR</button>
+    </div>
+  </form>
+
+  <p id="cw-auth-status" class="cw-feedback" role="status" aria-live="polite">
+    Juega libremente; la cuenta solo sirve para sincronizar.
+  </p>
+</section>
